@@ -207,20 +207,6 @@
           ]
         }
       ]
-    },
-    {
-      "name": "Database Seed",
-      "description": "SQL commands to populate test data. Run these in your PostgreSQL client.",
-      "item": [
-        {
-          "name": "Reset & Seed Test Data",
-          "request": {
-            "method": "GET",
-            "url": "about:blank",
-            "description": "```sql\n-- Reset database\nTRUNCATE TABLE redemption_history CASCADE;\nTRUNCATE TABLE vouchers RESTART IDENTITY CASCADE;\n\n-- Insert test vouchers\nINSERT INTO vouchers (code, quota, valid_until) VALUES\n    ('DISKON100', 10, NOW() + INTERVAL '7 days'),\n    ('FLASH50', 100, NOW() + INTERVAL '1 day'),\n    ('SOLDOUT', 0, NOW() + INTERVAL '5 days'),\n    ('EXPIRED1', 50, NOW() - INTERVAL '1 day'),\n    ('LASTONE', 1, NOW() + INTERVAL '2 days');\n\n-- Simulate user 123 already claimed FLASH50\nINSERT INTO vouchers (code, quota, valid_until) \nVALUES ('CLAIMED', 50, NOW() + INTERVAL '10 days');\n\nINSERT INTO redemption_history (voucher_id, user_id, redeemed_at)\nVALUES (\n    (SELECT id FROM vouchers WHERE code = 'CLAIMED'),\n    123,\n    NOW()\n);\n```\n\n### Test Vouchers\n\n| Code | Quota | Status | Purpose |\n|------|-------|--------|--------|\n| DISKON100 | 10 | ✅ Valid | Normal claim |\n| FLASH50 | 100 | ✅ Valid | Race condition test |\n| SOLDOUT | 0 | ❌ No quota | Quota exhausted |\n| EXPIRED1 | 50 | ❌ Expired | Expired voucher |\n| CLAIMED | 50 | ⚠️ User 123 claimed | Already redeemed |"
-          }
-        }
-      ]
     }
   ]
 }

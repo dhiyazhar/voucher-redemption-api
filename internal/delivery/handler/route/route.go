@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/dhiyazhar/voucher-redemption-api/internal/delivery/handler"
-	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 type RouteConfig struct {
@@ -17,7 +16,6 @@ type RouteConfig struct {
 func (r *RouteConfig) SetupRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/health", r.healthCheck)
 
-	mux.HandleFunc("/swagger/", httpSwagger.WrapHandler)
 	mux.HandleFunc("POST /api/vouchers", r.VoucherController.Create)
 	mux.HandleFunc("GET /api/vouchers/{code}", r.VoucherController.GetByCode)
 	mux.HandleFunc("POST /api/vouchers/{code}/claim", r.VoucherController.ClaimVoucher)
