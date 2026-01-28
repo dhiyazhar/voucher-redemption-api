@@ -1,0 +1,226 @@
+{
+  "info": {
+    "name": "Voucher Redemption API",
+    "description": "Flash sale voucher redemption system with race condition handling.\n\n## Base URL\n`http://localhost:8080`\n\n## Authentication\nSimulated via `X-User-ID` header (no real auth for demo purposes).\n\n## Features\n- Create vouchers\n- Claim vouchers with race condition protection\n- View redemption history\n- Database-level pessimistic locking (SELECT FOR UPDATE)\n\n## Test Data\nSee `Database Seed` folder for sample vouchers.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "12345678"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "123",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Check if the API is running."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": "{\n  \"status\": \"ok\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Vouchers",
+      "item": [
+        {
+          "name": "Create Voucher",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"NEWVOUCHER2026\",\n  \"quota\": 50,\n  \"valid_until_days\": 7\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/vouchers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vouchers"]
+            },
+            "description": "Create a new voucher.\n\n**Admin only** (no auth in demo).\n\n### Request Body\n- `code` (string, required): Unique voucher code\n- `quota` (integer, required): Number of redemptions available\n- `valid_until_days` (integer, required): Validity period in days from now"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"DISKON100\",\n  \"quota\": 10,\n  \"valid_until_days\": 7\n}"
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"code\": 201,\n  \"status\": \"CREATED\",\n  \"data\": {\n    \"id\": 1,\n    \"code\": \"DISKON100\",\n    \"quota\": 10,\n    \"valid_until\": \"2026-02-04T10:30:00Z\"\n  }\n}"
+            },
+            {
+              "name": "Conflict - Code Already Exists",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"code\": 409,\n  \"status\": \"CONFLICT\",\n  \"errors\": \"Voucher already exists\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Voucher by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vouchers/DISKON100",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vouchers", "DISKON100"]
+            },
+            "description": "Get voucher details including remaining quota.\n\n### Path Parameters\n- `code`: Voucher code (e.g., DISKON100)"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"code\": 200,\n  \"status\": \"SUCCESS\",\n  \"data\": {\n    \"id\": 1,\n    \"code\": \"DISKON100\",\n    \"quota\": 8,\n    \"valid_until\": \"2026-02-04T10:30:00Z\"\n  }\n}"
+            },
+            {
+              "name": "Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"code\": 404,\n  \"status\": \"NOT_FOUND\",\n  \"errors\": \"Your requested voucher is not exist\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Claim Voucher",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-ID",
+                "value": "{{user_id}}",
+                "description": "User ID (simulated auth)"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vouchers/DISKON100/claim",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vouchers", "DISKON100", "claim"]
+            },
+            "description": "Claim a voucher for a user.\n\n### Path Parameters\n- `code`: Voucher code\n\n### Headers\n- `X-User-ID`: User identifier (simulated auth, use any number)\n\n### Race Condition Handling\nThis endpoint uses `SELECT FOR UPDATE` to prevent race conditions:\n- Multiple concurrent claims are handled safely\n- Only available quota will be claimed\n- Prevents negative quota or double redemption"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"code\": 200,\n  \"status\": \"SUCCESS\",\n  \"data\": {\n    \"id\": 1,\n    \"code\": \"DISKON100\",\n    \"quota\": 9,\n    \"valid_until\": \"2026-02-04T10:30:00Z\"\n  }\n}"
+            },
+            {
+              "name": "Unauthorized - Missing X-User-ID",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"code\": 401,\n  \"status\": \"UNAUTHORIZED\",\n  \"errors\": \"X-User-ID header required\"\n}"
+            },
+            {
+              "name": "Conflict - Voucher Expired",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"code\": 409,\n  \"status\": \"VOUCHER_EXPIRED\",\n  \"errors\": \"Voucher is expired\"\n}"
+            },
+            {
+              "name": "Conflict - Quota Exhausted",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"code\": 409,\n  \"status\": \"VOUCHER_QUOTA_EXCEEDED\",\n  \"errors\": \"Voucher quota insufficient\"\n}"
+            },
+            {
+              "name": "Conflict - Already Redeemed",
+              "status": "Conflict",
+              "code": 409,
+              "body": "{\n  \"code\": 409,\n  \"status\": \"ALREADY_REDEEMED\",\n  \"errors\": \"Voucher has already redeemed\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Redemptions",
+      "item": [
+        {
+          "name": "Get Redemption History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vouchers/DISKON100/redemptions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "vouchers", "DISKON100", "redemptions"]
+            },
+            "description": "Get list of users who have redeemed a voucher.\n\n### Path Parameters\n- `code`: Voucher code"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"code\": 200,\n  \"status\": \"SUCCESS\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"voucher_id\": 1,\n      \"user_id\": 123,\n      \"redeemed_at\": \"2026-01-28T10:15:30Z\"\n    },\n    {\n      \"id\": 2,\n      \"voucher_id\": 1,\n      \"user_id\": 456,\n      \"redeemed_at\": \"2026-01-28T10:16:45Z\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "Success - Empty List",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"code\": 200,\n  \"status\": \"SUCCESS\",\n  \"data\": []\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Database Seed",
+      "description": "SQL commands to populate test data. Run these in your PostgreSQL client.",
+      "item": [
+        {
+          "name": "Reset & Seed Test Data",
+          "request": {
+            "method": "GET",
+            "url": "about:blank",
+            "description": "```sql\n-- Reset database\nTRUNCATE TABLE redemption_history CASCADE;\nTRUNCATE TABLE vouchers RESTART IDENTITY CASCADE;\n\n-- Insert test vouchers\nINSERT INTO vouchers (code, quota, valid_until) VALUES\n    ('DISKON100', 10, NOW() + INTERVAL '7 days'),\n    ('FLASH50', 100, NOW() + INTERVAL '1 day'),\n    ('SOLDOUT', 0, NOW() + INTERVAL '5 days'),\n    ('EXPIRED1', 50, NOW() - INTERVAL '1 day'),\n    ('LASTONE', 1, NOW() + INTERVAL '2 days');\n\n-- Simulate user 123 already claimed FLASH50\nINSERT INTO vouchers (code, quota, valid_until) \nVALUES ('CLAIMED', 50, NOW() + INTERVAL '10 days');\n\nINSERT INTO redemption_history (voucher_id, user_id, redeemed_at)\nVALUES (\n    (SELECT id FROM vouchers WHERE code = 'CLAIMED'),\n    123,\n    NOW()\n);\n```\n\n### Test Vouchers\n\n| Code | Quota | Status | Purpose |\n|------|-------|--------|--------|\n| DISKON100 | 10 | ✅ Valid | Normal claim |\n| FLASH50 | 100 | ✅ Valid | Race condition test |\n| SOLDOUT | 0 | ❌ No quota | Quota exhausted |\n| EXPIRED1 | 50 | ❌ Expired | Expired voucher |\n| CLAIMED | 50 | ⚠️ User 123 claimed | Already redeemed |"
+          }
+        }
+      ]
+    }
+  ]
+}

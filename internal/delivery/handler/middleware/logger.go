@@ -1,0 +1,27 @@
+package middleware
+
+import (
+	"log/slog"
+	"net/http"
+	"time"
+)
+
+func Logging(logger *slog.Logger, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		logger.Info("incoming request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"remote", r.RemoteAddr,
+		)
+
+		next.ServeHTTP(w, r)
+
+		logger.Info("request completed",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
+	})
+}
