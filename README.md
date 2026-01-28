@@ -7,7 +7,6 @@ A simple REST API for voucher redemption with race condition handling using data
 
 ## Architecture
 This project is an implementation of [Uncle Bob’s Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html), which is a design pattern that emphasizes separation of concerns, testability, and independence from frameworks or databases. The main idea: business rules should not depend on external systems, like databases, HTTP, or UI; though it still has coupling to SQL in usecase for handling transaction for simplicity's sake.
-![Clean Architecture Diagram](clean-architecture.webp)
 
 
 ## Tech Stack
@@ -140,7 +139,12 @@ The database is seeded once you run the migration with test vouchers for differe
 | CLAIMED                                   | 50    | +10 days    |
 
 
-To run the project locally:
+To run the project locally, make sure the following are installed on your device:
+- **Go 1.23** 
+- **PostgreSQL 16** (for running with your own PostgreSQL)
+- **Docker** 
+- [**golang-migrate**](https://github.com/golang-migrate/migrate]=) - for migration
+- **make**
 
 Clone the project
 
