@@ -141,7 +141,7 @@ The database is seeded once you run the migration with test vouchers for differe
 
 To run the project locally, make sure the following are installed on your device:
 - **Go 1.23** 
-- **PostgreSQL 16** (for running with your own PostgreSQL)
+- **PostgreSQL 16** (if you want to run it with your own PostgreSQL)
 - **Docker** 
 - [**golang-migrate**](https://github.com/golang-migrate/migrate]=) - for migration
 - **make**
